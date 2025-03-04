@@ -29,13 +29,15 @@ async def get_support_info_links(doi_list):
                 hrefs = list(filter(is_valid_link, all_hrefs))
                 url = urlparse(page.url)
                 links[doi] = tuple(
-                    (
-                        href
-                        if href.startswith("http")
-                        else f"{url.scheme}://"
-                        + f"{url.netloc}/{href}".replace("//", "/")
-                    )
-                    for href in hrefs
+                    {
+                        (
+                            href
+                            if href.startswith("http")
+                            else f"{url.scheme}://"
+                            + f"{url.netloc}/{href}".replace("//", "/")
+                        )
+                        for href in hrefs
+                    }
                 )
                 await page.close()
             except Exception:
