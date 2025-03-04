@@ -20,25 +20,39 @@ async def get_support_info_links(doi_list):
         for doi in tqdm(doi_list):
             try:
                 page = await browser.new_page()
-                await page.goto(f"https://doi.org/{doi}")
-                content = await page.content()
-                soup = bs4.BeautifulSoup(content, "html.parser")
-                all_hrefs = [
-                    link["href"] for link in soup.find_all("a") if "href" in link.attrs
-                ]
-                hrefs = list(filter(is_valid_link, all_hrefs))
-                url = urlparse(page.url)
-                links[doi] = tuple(
-                    {
-                        (
-                            href
-                            if href.startswith("http")
-                            else f"{url.scheme}://"
-                            + f"{url.netloc}/{href}".replace("//", "/")
-                        )
-                        for href in hrefs
-                    }
-                )
+                if doi.startswith("10.1016"):
+                    await page.goto(f"https://doi.org/{doi}", wait_until="networkidle")
+
+                    all_links = await page.eval_on_selector_all(
+                        "a[href]",  # Select all links
+                        "elements => elements.map(e => e.href)",
+                    )
+                    valid_links = [
+                        link
+                        for link in all_links
+                        if link.endswith((".pdf", ".doc", ".docx")) and "?" not in link
+                    ]
+                    links[doi] = tuple(set(valid_links))
+                else:
+                    await page.goto(f"https://doi.org/{doi}")
+                    content = await page.content()
+                    soup = bs4.BeautifulSoup(content, "html.parser")
+                    all_hrefs = [
+                        link["href"] for link in soup.find_all("a") if "href" in link.attrs
+                    ]
+                    hrefs = list(filter(is_valid_link, all_hrefs))
+                    url = urlparse(page.url)
+                    links[doi] = tuple(
+                        {
+                            (
+                                href
+                                if href.startswith("http")
+                                else f"{url.scheme}://"
+                                + f"{url.netloc}/{href}".replace("//", "/")
+                            )
+                            for href in hrefs
+                        }
+                    )
                 await page.close()
             except Exception:
                 links[doi] = tuple()
@@ -52,10 +66,10 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         start, end = map(int, sys.argv[1:])
     else:
-        start, end = 0, -1
+        start, end = 0, None
     refs = sorted(open("all_reference_dois.txt").read().splitlines())
     links = asyncio.run(get_support_info_links(refs[start:end]))
-    name = "support_info_links" if end == -1 else f"support_info_links_{start}_{end}"
+    name = "support_info_links" if end is None else f"support_info_links_{start}_{end}"
     with open(f"{name}.yaml", "w") as f:
         yaml.safe_dump(links, f)
 
