@@ -32,7 +32,8 @@ async def get_support_info_links(doi_list):
                     (
                         href
                         if href.startswith("http")
-                        else f"{url.scheme}://" + f"{url.netloc}/{href}".replace("//", "/")
+                        else f"{url.scheme}://"
+                        + f"{url.netloc}/{href}".replace("//", "/")
                     )
                     for href in hrefs
                 )
