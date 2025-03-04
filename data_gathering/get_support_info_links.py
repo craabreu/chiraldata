@@ -34,7 +34,10 @@ async def get_support_info_links(doi_list):
                     ]
                     links[doi] = tuple(set(valid_links))
                 else:
-                    await page.goto(f"https://doi.org/{doi}")
+                    if doi.startswith("10.31635"):
+                        await page.goto(f"https://www.chinesechemsoc.org/doi/suppl/{doi}")
+                    else:
+                        await page.goto(f"https://doi.org/{doi}")
                     content = await page.content()
                     soup = bs4.BeautifulSoup(content, "html.parser")
                     all_hrefs = [
@@ -69,7 +72,9 @@ if __name__ == "__main__":
         start, end = 0, None
     refs = sorted(open("all_reference_dois.txt").read().splitlines())
     links = asyncio.run(get_support_info_links(refs[start:end]))
-    name = "support_info_links" if end is None else f"support_info_links_{start}_{end}"
+    name = "support_info_links" + (
+        "" if end is None else f"_{start}_{end}"
+    )
     with open(f"{name}.yaml", "w") as f:
         yaml.safe_dump(links, f)
 
